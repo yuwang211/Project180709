@@ -53,12 +53,13 @@ int Bst::toList(int p, int tail)
 int Bst::toTree(int p)
 {
 	int size = 0;
-	for (int q = p; q != 0; q = t[p].r) ++size;
+	for (int q = p; q != 0; q = t[q].r) ++size;
 	return buildTree(p, size);
 }
 
 int Bst::buildTree(int &p, int size)
 {
+	if (size == 0) return 0;
 	int mid = ((1 + size) >> 1);
 	int q = buildTree(p, mid - 1);
 	t[p].l = q;
@@ -74,7 +75,7 @@ inline Bst::BstNode& Bst::operator[](int k)
 	return t[k];
 }
 
-int Bst::insert(int p, int key, int id, int val)
+int Bst::insert(int p, int key, int id, bool flag)
 {
 	if (p == 0)
 	{
@@ -84,29 +85,65 @@ int Bst::insert(int p, int key, int id, int val)
 		t[p].key = key;
 		t[p].size = 1;
 		t[p].id = id;
-		t[p].val = val;
-		t[p].min = val;
+		t[p].val = dt->assign(id);
+		t[p].min = t[p].val;
 		t[p].delta = 0;
 		return p;
 	}
 	down(p);
 	if (key < t[p].key || ((key == t[p].key) && (id < t[p].id)))
 	{
-		t[p].l = insert(t[p].l, key, id, val);
+		bool flag2 = ((t[t[p].l].size - 3 > (t[t[p].r].size << 1)));
+		t[p].l = insert(t[p].l, key, id, flag && flag2);
 		up(p);
-		if (t[t[p].l].size - 3 > (t[t[p].r].size << 1))
+		if (flag2)
 			t[p].l = toTree(toList(t[p].l));
 	}
 	else
 	{
-		t[p].r = insert(t[p].r, key, id, val);
+		bool flag2 = ((t[t[p].r].size - 3 > (t[t[p].l].size << 1)));
+		t[p].r = insert(t[p].r, key, id, flag && flag2);
 		up(p);
-		if (t[t[p].r].size - 3 > (t[t[p].l].size << 1))
+		if (flag2)
 			t[p].r = toTree(toList(t[p].r));
 	}
+	return p;
 }
 
-int Bst::remove(int p, int key, int id)
+
+
+int Bst::insert(int p, int n, bool flag)
+{
+	if (p == 0)
+	{
+		p = n;
+		t[p].l = t[p].r = 0;
+		t[p].size = 1;
+		t[p].min = t[p].val;
+		t[p].delta = 0;
+		return p;
+	}
+	down(p);
+	if (t[n].key < t[p].key || ((t[n].key == t[p].key) && (t[n].id < t[p].id)))
+	{
+		bool flag2 = ((t[t[p].l].size - 3 > (t[t[p].r].size << 1)));
+		t[p].l = insert(t[p].l, n, flag && flag2);
+		up(p);
+		if (flag2)
+			t[p].l = toTree(toList(t[p].l));
+	}
+	else
+	{
+		bool flag2 = ((t[t[p].r].size - 3 > (t[t[p].l].size << 1)));
+		t[p].r = insert(t[p].r, n, flag && flag2);
+		up(p);
+		if (flag2)
+			t[p].r = toTree(toList(t[p].r));
+	}
+	return p;
+}
+
+int Bst::remove(int p, int key, int id, bool flag)
 {
 	if (p == 0) return 0;
 	down(p);
@@ -148,18 +185,41 @@ int Bst::remove(int p, int key, int id)
 	}
 	else if (key < t[p].key || ((key == t[p].key) && (id < t[p].id)))
 	{
-		t[p].l = remove(t[p].l, key, id);
+		bool flag2 = ((t[t[p].r].size - 3 > (t[t[p].l].size << 1)));
+		t[p].l = remove(t[p].l, key, id, flag2 && flag);
 		up(p);
-		if (t[t[p].r].size - 3 > (t[t[p].l].size << 1))
+		if (flag2)
 			t[p].l = toTree(toList(t[p].l));
 	}
 	else
 	{
-		t[p].r = remove(t[p].r, key, id);
+		bool flag2 = ((t[t[p].l].size - 3 > (t[t[p].r].size << 1)));
+		t[p].r = remove(t[p].r, key, id, flag2 && flag);
 		up(p);
-		if (t[t[p].l].size - 3 > (t[t[p].r].size << 1))
+		if (flag2)
 			t[p].r = toTree(toList(t[p].r));
 	}
+	return p;
+}
+
+int Bst::merge(int p, int q)
+{
+	int tmp;
+	if (t[p].size < t[q].size)
+	{
+		tmp = p;
+		p = q;
+		q = tmp;
+	}
+	
+	q = toList(q);
+	while (q != 0)
+	{
+		tmp = t[q].r;
+		insert(p, q);
+		q = tmp;
+	}
+	return p;
 }
 
 void Bst::change(int p, int l, int r, int delta)
@@ -192,18 +252,20 @@ void Bst::change(int p, int l, int r, int delta)
 	up(p);
 }
 
-inline void Bst::linkDT(DT &d)
+inline void Bst::linkDT(DT *d)
 {
-	dt = &d;
+	dt = d;
 }
 
 void Bst::scanNegative(int p)
 {
 	if (p == 0) return;
+	down(p);
 	if (t[p].min >= 0) return;
 	
 	if (t[p].val < 0)
 		dt->report(t[p].id, t[p].val);
+	up(p);
 	
 	scanNegative(t[p].l);
 	scanNegative(t[p].r);
@@ -211,23 +273,57 @@ void Bst::scanNegative(int p)
 }
 
 
-void Bst::find(int p, int key, int id)
+void Bst::collect(int p, int key, int id)
 {
 	if (p == 0) return;
 	down(p);
 	
 	if (key == t[p].key && id == t[p].id)
 	{
-		// do something to t[p]
+		dt->collect(id, t[p].val);
+		up(p);
 	}
 	else if (key < t[p].key || ((key == t[p].key) && (id < t[p].id)))
 	{
-		find(t[p].l, key, id);
+		collect(t[p].l, key, id);
 		up(p);
 	}
 	else
 	{
-		find(t[p].r, key, id);
+		collect(t[p].r, key, id);
 		up(p);
 	}
+}
+
+
+void Bst::assign(int p, int key, int id)
+{
+	if (p == 0) return;
+	down(p);
+	
+	if (key == t[p].key && id == t[p].id)
+	{
+		t[p].val = dt->assign(id);
+		up(p);
+	}
+	else if (key < t[p].key || ((key == t[p].key) && (id < t[p].id)))
+	{
+		assign(t[p].l, key, id);
+		up(p);
+	}
+	else
+	{
+		assign(t[p].r, key, id);
+		up(p);
+	}
+}
+
+void Bst::print(int p)
+{
+	if (p == 0) return;
+	printf("(");
+	print(t[p].l);
+	printf("%d:%d[%d,%d]", t[p].key, t[p].id, t[p].min, t[p].val);
+	print(t[p].r);
+	printf(")");
 }

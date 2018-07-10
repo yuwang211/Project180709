@@ -1,3 +1,6 @@
+#ifndef _BST_H__
+#define _BST_H__
+
 
 #include <cstdio>
 #include <cstdlib>
@@ -32,17 +35,23 @@ class Bst{
 		
 		BstNode& operator[](int k);
 	
-		int insert(int p, int key, int id, int val);
-		int remove(int p, int key, int id);
+		int insert(int p, int key, int id, bool flag = true);
+		int insert(int p, int n, bool flag = true);
+		int remove(int p, int key, int id, bool flag = true);
+		int merge(int p, int q);
+		
 		
 		void change(int p, int l, int r, int delta);
 		
 		//linked with distributed tracking
-		void linkDT(DT &d);
+		void linkDT(DT *d);
 		
 		void scanNegative(int p);
 		
-		void find(int p, int key, int id);
+		void collect(int p, int key, int id);
+		void assign(int p, int key, int id);
+		
+		void print(int p);
 	
 	private:
 	
@@ -66,3 +75,5 @@ class Bst{
 };
 
 #include "bst.cpp"
+
+#endif
